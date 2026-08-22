@@ -1,0 +1,7 @@
+[
+  { "id": "auto_20260719_manual1", "date": "2026-07-19", "time": "09:00", "duration": 0, "kwh": 17.98, "note": "Handmatig toegevoegd (voor start automatisering)" },
+  { "id": "auto_20260727_1845_catchup", "date": "2026-07-27", "time": "18:45", "duration": 6582, "kwh": 43.77, "note": "Automatisch gelogd, maar grove piek/dal-schatting (achtergrondtaak stond ruim 4 dagen stil)" },
+  { "id": "auto_20260801T0827", "date": "2026-08-01", "time": "08:27", "duration": 676, "kwh": 43.82, "note": "Automatisch gelogd (meterstand)" },
+  { "id": "auto_20260801T1943", "date": "2026-08-01", "time": "19:43", "duration": 5843, "kwh": 55.36, "note": "Automatisch gelogd (meterstand)" },
+  { "id": "auto_20260814T0914_catchup", "date": "2026-08-14", "time": "09:14", "duration": 12188, "kwh": 112.16, "note": "Automatisch gelogd, grove piek/dal-schatting (lokale taak liep vast tussen 14 en 22 aug — migratie naar cloud-pipeline)" }
+]

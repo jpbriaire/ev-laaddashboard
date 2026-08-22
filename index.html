@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EV Laaddashboard – Alfen Wallbox</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg-page: #eef2f0;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #e7ece9;
+    --text-primary: #10201d;
+    --text-secondary: #4c5c57;
+    --text-muted: #8a948f;
+    --border: rgba(16,32,29,0.12);
+    --accent: #0f766e;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(15,118,110,0.12);
+    --series-cost: #2a78d6;
+    --series-revenue: #008300;
+    --series-peak: #eb6834;
+    --series-offpeak: #4a3aa7;
+    --status-good: #0ca30c;
+    --status-critical: #d03b3b;
+    --grid-line: #e1e0d9;
+    --shadow: 0 1px 2px rgba(16,32,29,0.06), 0 8px 24px rgba(16,32,29,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --bg-page: #0b1412;
+      --bg-surface: #121c1a;
+      --bg-surface-2: #17221f;
+      --text-primary: #eef3f1;
+      --text-secondary: #b7c3bf;
+      --text-muted: #7c8985;
+      --border: rgba(255,255,255,0.12);
+      --accent: #2dd4bf;
+      --accent-ink: #062723;
+      --accent-soft: rgba(45,212,191,0.16);
+      --series-cost: #3987e5;
+      --series-revenue: #22c55e;
+      --series-peak: #d95926;
+      --series-offpeak: #9085e9;
+      --status-good: #34d15c;
+      --status-critical: #e66767;
+      --grid-line: #263531;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg-page: #0b1412;
+    --bg-surface: #121c1a;
+    --bg-surface-2: #17221f;
+    --text-primary: #eef3f1;
+    --text-secondary: #b7c3bf;
+    --text-muted: #7c8985;
+    --border: rgba(255,255,255,0.12);
+    --accent: #2dd4bf;
+    --accent-ink: #062723;
+    --accent-soft: rgba(45,212,191,0.16);
+    --series-cost: #3987e5;
+    --series-revenue: #22c55e;
+    --series-peak: #d95926;
+    --series-offpeak: #9085e9;
+    --status-good: #34d15c;
+    --status-critical: #e66767;
+    --grid-line: #263531;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg-page: #eef2f0;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #e7ece9;
+    --text-primary: #10201d;
+    --text-secondary: #4c5c57;
+    --text-muted: #8a948f;
+    --border: rgba(16,32,29,0.12);
+    --accent: #0f766e;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(15,118,110,0.12);
+    --series-cost: #2a78d6;
+    --series-revenue: #008300;
+    --series-peak: #eb6834;
+    --series-offpeak: #4a3aa7;
+    --status-good: #0ca30c;
+    --status-critical: #d03b3b;
+    --grid-line: #e1e0d9;
+    --shadow: 0 1px 2px rgba(16,32,29,0.06), 0 8px 24px rgba(16,32,29,0.05);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 28px 20px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .card { transition: box-shadow .15s ease; }
+  }
+
+  /* ---------- Header ---------- */
+  header.top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header.top .title-block h1 {
+    font-size: 22px;
+    margin: 0 0 2px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  header.top .title-block p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13.5px;
+  }
+  .meter-badge {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    background: var(--bg-surface);
+  }
+
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+
+  /* ---------- Control deck ---------- */
+  .control-deck {
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .deck-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+  }
+  .field-group input[type="number"],
+  .field-group input[type="date"],
+  .field-group input[type="time"],
+  .field-group input[type="text"] {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface-2);
+    color: var(--text-primary);
+    width: 128px;
+  }
+  .field-group input[type="text"] { font-family: inherit; width: 200px; }
+  .field-group input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .tariff-euro { position: relative; }
+  .rule-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    max-width: 60ch;
+    line-height: 1.5;
+  }
+  .rule-note b { color: var(--text-secondary); font-weight: 600; }
+
+  .period-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .segmented {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-surface-2);
+    padding: 3px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+  }
+  .segmented button {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    padding: 6px 11px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .segmented button.active {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .period-row input[type="date"] {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface-2);
+    color: var(--text-primary);
+  }
+  .period-row .sep { color: var(--text-muted); font-size: 12px; }
+
+  /* ---------- Stat tiles ---------- */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 900px) { .stat-row { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 520px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+  .stat-tile {
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stat-tile .stat-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+  }
+  .swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .stat-tile .stat-value {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .stat-tile .stat-sub {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-tile .split-bar {
+    height: 5px;
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    background: var(--bg-surface-2);
+  }
+
+  /* ---------- Chart ---------- */
+  .chart-card { padding: 18px 20px 14px; }
+  .chart-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chart-head h2 { font-size: 14px; margin: 0; }
+  .legend { display: flex; gap: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .chart-scroll { overflow-x: auto; }
+  .chart-plot {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    min-height: 160px;
+    padding: 4px 4px 0;
+    position: relative;
+    background-image: repeating-linear-gradient(to top, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent 25%);
+  }
+  .month-group { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 46px; }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 140px; }
+  .bar { width: 14px; border-radius: 3px 3px 1px 1px; min-height: 2px; }
+  .bar.cost { background: var(--series-cost); }
+  .bar.revenue { background: var(--series-revenue); }
+  .month-net { font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .month-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  .empty-note { color: var(--text-muted); font-size: 13px; padding: 20px 4px; }
+
+  /* ---------- Table card ---------- */
+  .table-card { padding: 18px 20px 20px; }
+  .table-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .table-head h2 { font-size: 14px; margin: 0; }
+  .ghost-btn {
+    font-family: inherit;
+    font-size: 12.5px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface-2);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .ghost-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ghost-btn:disabled { opacity: .6; cursor: default; }
+  .refresh-group { display: flex; align-items: center; gap: 8px; }
+  .refresh-status { font-size: 12px; color: var(--text-muted); }
+  .refresh-status.ok { color: var(--status-good); }
+  .refresh-status.err { color: var(--status-critical); }
+  .primary-btn {
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: var(--accent);
+    color: var(--accent-ink);
+    cursor: pointer;
+  }
+  .primary-btn:hover { filter: brightness(1.05); }
+
+  .add-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    padding: 12px;
+    margin-bottom: 14px;
+    background: var(--bg-surface-2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .add-form .field-group input { width: 118px; }
+  .add-form .field-group.note input { width: 180px; }
+
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  thead th {
+    text-align: right;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  thead th.left, tbody td.left { text-align: left; }
+  tbody td {
+    padding: 8px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--grid-line);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  tbody tr:hover { background: var(--bg-surface-2); }
+  tbody td.note { color: var(--text-secondary); text-align: left; white-space: normal; font-variant-numeric: normal; }
+  .del-btn {
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+  .del-btn:hover { color: var(--status-critical); background: var(--bg-surface-2); }
+  .good { color: var(--status-good); }
+  .critical { color: var(--status-critical); }
+  .undo-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text-primary);
+    color: var(--bg-surface);
+    padding: 9px 16px;
+    border-radius: 9px;
+    font-size: 13px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    box-shadow: var(--shadow);
+  }
+  .undo-toast button {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .help-text { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="title-block">
+      <h1>EV Laaddashboard</h1>
+      <p>Alfen Eve Single S-Line — kosten vs. leasevergoeding per periode</p>
+    </div>
+    <div class="meter-badge">METER READING · kWh</div>
+  </header>
+
+  <section class="card control-deck">
+    <div class="deck-row">
+      <div class="field-group">
+        <label for="rate-peak">Piektarief €/kWh</label>
+        <input id="rate-peak" type="number" step="0.0001" min="0" placeholder="0,00">
+      </div>
+      <div class="field-group">
+        <label for="rate-offpeak">Daltarief €/kWh</label>
+        <input id="rate-offpeak" type="number" step="0.0001" min="0" placeholder="0,00">
+      </div>
+      <div class="field-group">
+        <label for="rate-lease">Leasevergoeding €/kWh</label>
+        <input id="rate-lease" type="number" step="0.0001" min="0" placeholder="0,00">
+      </div>
+      <p class="rule-note"><b>Piek:</b> ma–do 07:00–21:00 en vr 07:00–23:00. <b>Dal:</b> overige tijden, inclusief het hele weekend (vr 23:00 – ma 07:00).</p>
+    </div>
+    <div class="period-row">
+      <div class="segmented" id="preset-buttons">
+        <button data-preset="month">Deze maand</button>
+        <button data-preset="lastmonth">Vorige maand</button>
+        <button data-preset="year">Dit jaar</button>
+        <button data-preset="all">Alles</button>
+      </div>
+      <span class="sep">van</span>
+      <input type="date" id="range-start">
+      <span class="sep">t/m</span>
+      <input type="date" id="range-end">
+    </div>
+  </section>
+
+  <section class="stat-row" id="stat-row"></section>
+
+  <section class="card chart-card">
+    <div class="chart-head">
+      <h2>Kosten vs. vergoeding per maand</h2>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch" style="background:var(--series-cost)"></span>Kosten</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--series-revenue)"></span>Vergoeding</span>
+      </div>
+    </div>
+    <div class="chart-scroll">
+      <div class="chart-plot" id="chart-plot"></div>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-head">
+      <h2>Laadsessies</h2>
+      <div class="refresh-group">
+        <button class="ghost-btn" id="reload-btn">Herlaad sessies</button>
+        <span class="refresh-status" id="refresh-status"></span>
+      </div>
+    </div>
+
+    <form class="add-form" id="add-form">
+      <div class="field-group">
+        <label for="f-date">Datum</label>
+        <input type="date" id="f-date" required>
+      </div>
+      <div class="field-group">
+        <label for="f-time">Starttijd</label>
+        <input type="time" id="f-time" required>
+      </div>
+      <div class="field-group">
+        <label for="f-duration">Duur (min)</label>
+        <input type="number" id="f-duration" min="0" placeholder="optioneel">
+      </div>
+      <div class="field-group">
+        <label for="f-kwh">kWh geladen</label>
+        <input type="number" step="0.01" min="0" id="f-kwh" required>
+      </div>
+      <div class="field-group note">
+        <label for="f-note">Notitie</label>
+        <input type="text" id="f-note" placeholder="optioneel">
+      </div>
+      <button type="submit" class="primary-btn">Sessie toevoegen</button>
+    </form>
+    <p class="help-text">Geen duur bekend? Laat leeg — dan wordt de sessie als één moment ingedeeld op basis van de starttijd (kies bv. 22:00 voor een sessie die je weet dat volledig in het dal viel).</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="left">Datum</th>
+            <th class="left">Start</th>
+            <th>Duur</th>
+            <th>kWh piek</th>
+            <th>kWh dal</th>
+            <th>Kosten</th>
+            <th>Vergoeding</th>
+            <th>Netto</th>
+            <th class="left">Notitie</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div id="undo-slot"></div>
+
+<script>
+(function () {
+  const CONFIG_KEY = 'evdash.config.v2';
+  const SESSIONS_KEY = 'evdash.sessions.v2';
+
+  const fmtEUR = (n) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n || 0);
+  const fmtKWH = (n) => new Intl.NumberFormat('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(n || 0) + ' kWh';
+  const fmtDate = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  function loadConfig() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CONFIG_KEY));
+      if (raw) return raw;
+    } catch (e) {}
+    return { peak: 0, offpeak: 0, lease: 0 };
+  }
+  function saveConfig(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
+
+  // Sessions worden elke 15 min bijgewerkt door een GitHub Actions workflow
+  // (scripts/sync.mjs) die sessions.json schrijft op basis van Home Assistant.
+  async function fetchSeedSessions() {
+    try {
+      const res = await fetch('./sessions.json', { cache: 'no-store' });
+      if (!res.ok) return [];
+      return await res.json();
+    } catch (e) { return []; }
+  }
+
+  async function loadSessions() {
+    let sessions = [];
+    try {
+      sessions = JSON.parse(localStorage.getItem(SESSIONS_KEY)) || [];
+    } catch (e) { sessions = []; }
+    const ids = new Set(sessions.map(s => s.id));
+    const seed = await fetchSeedSessions();
+    seed.forEach(s => { if (!ids.has(s.id)) sessions.push(s); });
+    saveSessions(sessions);
+    return sessions;
+  }
+  function saveSessions(sessions) { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions)); }
+
+  // ---- Peak/off-peak calendar rule ----
+  // Mon-Thu 07:00-21:00 peak, Fri 07:00-23:00 peak, Sat/Sun all off-peak.
+  function dayPeakWindow(date) {
+    const day = date.getDay();
+    const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
+    if (day >= 1 && day <= 4) return [new Date(y, m, d, 7, 0), new Date(y, m, d, 21, 0)];
+    if (day === 5) return [new Date(y, m, d, 7, 0), new Date(y, m, d, 23, 0)];
+    return null;
+  }
+  function overlapMinutes(aStart, aEnd, bStart, bEnd) {
+    const start = Math.max(aStart.getTime(), bStart.getTime());
+    const end = Math.min(aEnd.getTime(), bEnd.getTime());
+    return Math.max(0, (end - start) / 60000);
+  }
+  function isPeakInstant(date) {
+    const win = dayPeakWindow(date);
+    return win ? (date >= win[0] && date < win[1]) : false;
+  }
+  function splitPeakDal(start, end) {
+    const totalMin = (end - start) / 60000;
+    if (totalMin <= 0) {
+      const peak = isPeakInstant(start);
+      return { peakMin: peak ? 1 : 0, dalMin: peak ? 0 : 1, totalMin: 1 };
+    }
+    let peakMin = 0;
+    let cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    while (cursor <= end) {
+      const win = dayPeakWindow(cursor);
+      if (win) peakMin += overlapMinutes(start, end, win[0], win[1]);
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
+    }
+    return { peakMin, dalMin: Math.max(0, totalMin - peakMin), totalMin };
+  }
+
+  function computeSession(s, cfg) {
+    const start = new Date(s.date + 'T' + s.time + ':00');
+    const durationMin = Number(s.duration) || 0;
+    const end = new Date(start.getTime() + durationMin * 60000);
+    const { peakMin, dalMin, totalMin } = splitPeakDal(start, end);
+    const kwh = Number(s.kwh) || 0;
+    const peakKwh = totalMin > 0 ? kwh * (peakMin / totalMin) : 0;
+    const dalKwh = kwh - peakKwh;
+    const cost = peakKwh * cfg.peak + dalKwh * cfg.offpeak;
+    const revenue = kwh * cfg.lease;
+    return { ...s, start, peakKwh, dalKwh, cost, revenue, net: revenue - cost };
+  }
+
+  // ---- State ----
+  let config = loadConfig();
+  let sessions = [];
+  let periodPreset = 'month';
+  let rangeStart, rangeEnd;
+
+  function presetRange(preset) {
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    if (preset === 'month') return [new Date(y, m, 1), new Date(y, m + 1, 0)];
+    if (preset === 'lastmonth') return [new Date(y, m - 1, 1), new Date(y, m, 0)];
+    if (preset === 'year') return [new Date(y, 0, 1), new Date(y, 11, 31)];
+    return [new Date(2000, 0, 1), new Date(2100, 0, 1)];
+  }
+  function toISO(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+
+  function setPreset(preset) {
+    periodPreset = preset;
+    const [s, e] = presetRange(preset);
+    rangeStart = s; rangeEnd = e;
+    document.getElementById('range-start').value = toISO(s);
+    document.getElementById('range-end').value = toISO(e);
+    document.querySelectorAll('#preset-buttons button').forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
+    render();
+  }
+
+  document.getElementById('preset-buttons').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (btn) setPreset(btn.dataset.preset);
+  });
+  document.getElementById('range-start').addEventListener('change', (e) => {
+    rangeStart = new Date(e.target.value + 'T00:00:00');
+    periodPreset = null;
+    document.querySelectorAll('#preset-buttons button').forEach(b => b.classList.remove('active'));
+    render();
+  });
+  document.getElementById('range-end').addEventListener('change', (e) => {
+    rangeEnd = new Date(e.target.value + 'T00:00:00');
+    periodPreset = null;
+    document.querySelectorAll('#preset-buttons button').forEach(b => b.classList.remove('active'));
+    render();
+  });
+
+  // ---- Config inputs ----
+  const rateInputs = { peak: document.getElementById('rate-peak'), offpeak: document.getElementById('rate-offpeak'), lease: document.getElementById('rate-lease') };
+  Object.entries(rateInputs).forEach(([key, el]) => {
+    el.value = config[key] || '';
+    el.addEventListener('input', () => {
+      config[key] = parseFloat(el.value) || 0;
+      saveConfig(config);
+      render();
+    });
+  });
+
+  // ---- Add session form ----
+  document.getElementById('f-date').value = toISO(new Date());
+  document.getElementById('add-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const s = {
+      id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      date: document.getElementById('f-date').value,
+      time: document.getElementById('f-time').value,
+      duration: document.getElementById('f-duration').value,
+      kwh: document.getElementById('f-kwh').value,
+      note: document.getElementById('f-note').value,
+    };
+    sessions.push(s);
+    saveSessions(sessions);
+    e.target.reset();
+    document.getElementById('f-date').value = toISO(new Date());
+    render();
+  });
+
+  document.getElementById('reload-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('reload-btn');
+    const status = document.getElementById('refresh-status');
+    btn.disabled = true;
+    status.className = 'refresh-status';
+    status.textContent = 'Verversen…';
+    try {
+      sessions = await loadSessions();
+      render();
+      status.className = 'refresh-status ok';
+      status.textContent = 'Bijgewerkt.';
+    } catch (e) {
+      status.className = 'refresh-status err';
+      status.textContent = 'Verversen mislukt.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  let lastDeleted = null, lastDeletedIndex = null, undoTimer = null;
+  function deleteSession(id) {
+    const idx = sessions.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    lastDeleted = sessions[idx];
+    lastDeletedIndex = idx;
+    sessions.splice(idx, 1);
+    saveSessions(sessions);
+    render();
+    showUndo();
+  }
+  function showUndo() {
+    clearTimeout(undoTimer);
+    const slot = document.getElementById('undo-slot');
+    slot.innerHTML = '<div class="undo-toast">Sessie verwijderd <button id="undo-btn">Ongedaan maken</button></div>';
+    document.getElementById('undo-btn').addEventListener('click', () => {
+      if (lastDeleted) sessions.splice(lastDeletedIndex, 0, lastDeleted);
+      saveSessions(sessions);
+      slot.innerHTML = '';
+      render();
+    });
+    undoTimer = setTimeout(() => { slot.innerHTML = ''; }, 6000);
+  }
+
+  // ---- Rendering ----
+  function filteredComputed() {
+    return sessions
+      .map(s => computeSession(s, config))
+      .filter(s => s.start >= rangeStart && s.start <= new Date(rangeEnd.getTime() + 24 * 3600000 - 1))
+      .sort((a, b) => b.start - a.start);
+  }
+
+  function renderStats(list) {
+    const totalKwh = list.reduce((a, s) => a + Number(s.kwh || 0), 0);
+    const peakKwh = list.reduce((a, s) => a + s.peakKwh, 0);
+    const dalKwh = list.reduce((a, s) => a + s.dalKwh, 0);
+    const cost = list.reduce((a, s) => a + s.cost, 0);
+    const revenue = list.reduce((a, s) => a + s.revenue, 0);
+    const net = revenue - cost;
+    const peakPct = totalKwh > 0 ? (peakKwh / totalKwh) * 100 : 0;
+
+    const tiles = [
+      { label: 'Totaal geladen', value: fmtKWH(totalKwh), sub: list.length + ' sessie' + (list.length === 1 ? '' : 's') },
+      { label: 'Piek / dal kWh', value: fmtKWH(peakKwh), sub: fmtKWH(dalKwh) + ' dal', split: peakPct, swatchPeak: true },
+      { label: 'Kosten', value: fmtEUR(cost), swatch: 'var(--series-cost)' },
+      { label: 'Vergoeding', value: fmtEUR(revenue), swatch: 'var(--series-revenue)' },
+      { label: 'Netto resultaat', value: fmtEUR(net), cls: net >= 0 ? 'good' : 'critical' },
+      { label: 'Gem. €/kWh (kosten)', value: totalKwh > 0 ? fmtEUR(cost / totalKwh) : '—' },
+    ];
+
+    document.getElementById('stat-row').innerHTML = tiles.map(t => `
+      <div class="card stat-tile">
+        <div class="stat-label">${t.swatch ? `<span class="swatch" style="background:${t.swatch}"></span>` : ''}${t.label}</div>
+        <div class="stat-value ${t.cls || ''}">${t.value}</div>
+        ${t.sub ? `<div class="stat-sub">${t.sub}</div>` : ''}
+        ${t.split !== undefined ? `<div class="split-bar"><span style="width:${t.split}%;background:var(--series-peak)"></span><span style="width:${100 - t.split}%;background:var(--series-offpeak)"></span></div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function renderChart(list) {
+    const byMonth = {};
+    list.forEach(s => {
+      const key = s.start.getFullYear() + '-' + pad2(s.start.getMonth() + 1);
+      if (!byMonth[key]) byMonth[key] = { cost: 0, revenue: 0, date: new Date(s.start.getFullYear(), s.start.getMonth(), 1) };
+      byMonth[key].cost += s.cost;
+      byMonth[key].revenue += s.revenue;
+    });
+    const months = Object.values(byMonth).sort((a, b) => a.date - b.date);
+    const plot = document.getElementById('chart-plot');
+    if (months.length === 0) {
+      plot.innerHTML = '<p class="empty-note">Geen sessies in deze periode.</p>';
+      return;
+    }
+    const max = Math.max(1, ...months.map(m => Math.max(m.cost, m.revenue)));
+    plot.innerHTML = months.map(m => {
+      const net = m.revenue - m.cost;
+      const costH = Math.max(2, (m.cost / max) * 140);
+      const revH = Math.max(2, (m.revenue / max) * 140);
+      return `
+        <div class="month-group">
+          <div class="month-net ${net >= 0 ? 'good' : 'critical'}">${fmtEUR(net)}</div>
+          <div class="bars">
+            <div class="bar cost" style="height:${costH}px" title="Kosten ${fmtEUR(m.cost)}"></div>
+            <div class="bar revenue" style="height:${revH}px" title="Vergoeding ${fmtEUR(m.revenue)}"></div>
+          </div>
+          <div class="month-label">${m.date.toLocaleDateString('nl-NL', { month: 'short', year: '2-digit' })}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderTable(list) {
+    const body = document.getElementById('table-body');
+    if (list.length === 0) {
+      body.innerHTML = '<tr><td colspan="10" class="note">Nog geen sessies in deze periode. Voeg er hierboven een toe.</td></tr>';
+      return;
+    }
+    body.innerHTML = list.map(s => `
+      <tr>
+        <td class="left">${fmtDate(s.date)}</td>
+        <td class="left">${s.time}</td>
+        <td>${s.duration ? s.duration + ' min' : '—'}</td>
+        <td>${fmtKWH(s.peakKwh)}</td>
+        <td>${fmtKWH(s.dalKwh)}</td>
+        <td>${fmtEUR(s.cost)}</td>
+        <td>${fmtEUR(s.revenue)}</td>
+        <td class="${s.net >= 0 ? 'good' : 'critical'}">${fmtEUR(s.net)}</td>
+        <td class="left note">${s.note || ''}</td>
+        <td><button class="del-btn" data-id="${s.id}" title="Verwijderen">✕</button></td>
+      </tr>
+    `).join('');
+    body.querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', () => deleteSession(btn.dataset.id)));
+  }
+
+  function render() {
+    const list = filteredComputed();
+    renderStats(list);
+    renderChart(list);
+    renderTable(list);
+  }
+
+  (async () => {
+    sessions = await loadSessions();
+    setPreset('month');
+  })();
+})();
+</script>
+</body>
+</html>

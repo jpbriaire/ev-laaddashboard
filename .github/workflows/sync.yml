@@ -1,0 +1,37 @@
+name: Sync EV laadsessies
+
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ev-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sync met Home Assistant
+        env:
+          HA_BASE_URL: ${{ secrets.HA_BASE_URL }}
+          HA_TOKEN: ${{ secrets.HA_TOKEN }}
+        run: node scripts/sync.mjs
+
+      - name: Commit en push wijzigingen
+        run: |
+          git config user.name "ev-dashboard-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add sessions.json state.json
+          git diff --cached --quiet || git commit -m "Sync laadsessie $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
