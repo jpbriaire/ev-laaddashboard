@@ -3,5 +3,7 @@
   { "id": "auto_20260727_1845_catchup", "date": "2026-07-27", "time": "18:45", "duration": 6582, "kwh": 43.77, "note": "Automatisch gelogd, maar grove piek/dal-schatting (achtergrondtaak stond ruim 4 dagen stil)" },
   { "id": "auto_20260801T0827", "date": "2026-08-01", "time": "08:27", "duration": 676, "kwh": 43.82, "note": "Automatisch gelogd (meterstand)" },
   { "id": "auto_20260801T1943", "date": "2026-08-01", "time": "19:43", "duration": 5843, "kwh": 55.36, "note": "Automatisch gelogd (meterstand)" },
-  { "id": "auto_20260814T0914_catchup", "date": "2026-08-14", "time": "09:14", "duration": 12188, "kwh": 112.16, "note": "Automatisch gelogd, grove piek/dal-schatting (lokale taak liep vast tussen 14 en 22 aug — migratie naar cloud-pipeline)" }
+  { "id": "auto_20260816T1929_reconstructed", "date": "2026-08-16", "time": "19:29", "duration": 793, "kwh": 73.11, "note": "Gereconstrueerd uit HA-geschiedenis (exact, niet geschat)" },
+  { "id": "auto_20260822T1147_reconstructed", "date": "2026-08-22", "time": "11:47", "duration": 147, "kwh": 26.35, "note": "Gereconstrueerd uit HA-geschiedenis (exact, niet geschat)" },
+  { "id": "auto_20260822T1444_reconstructed", "date": "2026-08-22", "time": "14:44", "duration": 71, "kwh": 12.70, "note": "Gereconstrueerd uit HA-geschiedenis (exact, niet geschat)" }
 ]
