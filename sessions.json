@@ -126,5 +126,13 @@
     "duration": 690,
     "kwh": 39.85,
     "note": "Automatisch gelogd (GitHub Actions)"
+  },
+  {
+    "id": "auto_20260920T1823",
+    "date": "2026-09-20",
+    "time": "18:23",
+    "duration": 878,
+    "kwh": 55.4,
+    "note": "Automatisch gelogd (GitHub Actions)"
   }
 ]
